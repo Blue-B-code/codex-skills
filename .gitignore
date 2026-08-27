@@ -1,0 +1,10 @@
+# skills système fournis par Codex (non versionnés)
+.system/
+# runtime + secrets (jamais versionner)
+**/state/
+**/__pycache__/
+*.pyc
+*.log
+**/.env
+**/tokens*.json
+**/config.json

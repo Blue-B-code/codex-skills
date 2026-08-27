@@ -1,0 +1,5 @@
+# runtime + secrets (ne jamais versionner)
+state/
+__pycache__/
+*.pyc
+*.log

@@ -1,6 +1,6 @@
 ---
 name: mi
-description: "Projet MI (MobileInvoice, Orange Money / Y-Note) : stack locale Docker, branche de démarrage develop-sp-local, validation obligatoire du code dans le conteneur orangemoney_web-mi (PHPUnit, Vitest, phpcs, phpstan, phpmd, eslint-vite, tsc, jscpd), et tests fonctionnels UILicious (manifeste ci/uilicious-tests.json, exécution via uilicious-cli sur le projet Paynote-MI). À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice : diagnostiquer la stack locale, valider du code PHP/TS/React, ou ajouter/fixer/valider des tests fonctionnels UILicious."
+description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack locale Docker, branche de démarrage develop-sp-local, validation obligatoire du code dans le conteneur orangemoney_web-mi (PHPUnit, Vitest, phpcs, phpstan, phpmd, eslint-vite, tsc, jscpd), et tests fonctionnels UILicious (manifeste ci/uilicious-tests.json, exécution via uilicious-cli sur le projet Paynote-MI). À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice : diagnostiquer la stack locale, valider du code PHP/TS/React, ou ajouter/fixer/valider des tests fonctionnels UILicious."
 ---
 
 # Projet MI (MobileInvoice) — stack locale, validation QA et tests fonctionnels
@@ -11,7 +11,7 @@ description: "Projet MI (MobileInvoice, Orange Money / Y-Note) : stack locale Do
 ## Stack locale MI (Docker)
 
 - Repo : `/home/y-note/OrangeMoney/MobileInvoice` (le code est monté dans le conteneur `orangemoney_web-mi` sous `/var/www/mobileinvoice`).
-- Conteneurs de la stack : `nginx-test` (sert l'application : nginx + fastcgi vers `web-test`), `orangemoney_web-mi` (php-fpm, `web-test`), `cron-test`, `dynamodb-local`, `orangemoney_db-mi`, `openimis-rabbitmq`, `mailpit-test` (capture les emails envoyés par l'app), `phpmyadmin_orangemoney-mi`.
+- Conteneurs de la stack : `nginx-test` (sert l'application : nginx + fastcgi vers `web-test`), `orangemoney_web-mi` (php-fpm, `web-test`), `cron-test`, `dynamodb-local`, `orangemoney_db-mi`, `maildev_docker_symfony--mi` (capture les emails envoyés par l'app), `phpmyadmin_orangemoney-mi`.
 - L'application locale est accessible via `nginx-test` (port 80 interne, réseau docker `mi-Symfony-net`). **Ne pas lancer de serveur PHP manuel** (`php -S`) : la stack fournit déjà l'app.
 - Commandes utiles :
   - `docker ps` / `docker logs <conteneur>` pour l'état.
@@ -36,6 +36,7 @@ Toute validation se fait **dans le conteneur `orangemoney_web-mi`** (le code loc
 - QA PHP : `vendor/bin/phing sast-analysis` (phpstan, psalm) ; rapports dans `build/logs/` (phpstan.xml, phpcs.xml, junit).
 - Tests unitaires Vite : `cd vite-frontend && npm run test:coverage` ; ciblé : `npx vitest run <fichiers>`.
 - QA Vite : `npm run lint:quality` (eslint), `npx tsc --noEmit` (types), `npm run duplication` (jscpd).
+- **Ciblage (à faire)** : la validation/QA doit porter en priorité sur **le code ajouté ou modifié** — exécuter le test unitaire PHP du contrôleur/service touché (`vendor/bin/phpunit --filter <Classe>`), `phpcs`/`phpstan` sur ces fichiers PHP ; pour le frontend, `npx vitest run <fichiers-touchés>`, `tsc` et `lint` sur les fichiers TS/React touchés. Ne jamais conclure « propre » si le code modifié n'a pas été couvert par ces checks.
 - **Exigence** : tout doit être propre pour le code ajouté. Si des faux positifs sont détectés (warnings/erreurs pré-existants, limites de config, etc.), **les remonter à l'utilisateur avec explications** pour qu'il prenne la décision — ne pas tricher, masquer ou contourner.
 
 ## Tests fonctionnels UILicious

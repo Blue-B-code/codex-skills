@@ -46,3 +46,7 @@ Traiter un ticket Redmine (fix de revue OU feature) de la prise en main jusqu'à
 - **Item** : `kind=sprint_ticket`, `key=sprint_ticket_<id>`, `sub=processed_tickets`, `sub_id=ticket_id`, portant `subject`, `body`, `tracker`, `url`, `redmine_project_id`.
 - **Propose** : pour un `sprint_ticket`, le modèle rédige un **plan d'implémentation clair** (contexte, étapes, fichiers, PR attendue, tests) et l'envoie sur Telegram ; la proposition est écrite dans `state/proposals/<projet>_<ticket_id>.md`.
 - **Approbation** : ✅ → le skill projet implémente la feature (worktree `feature-<n>`, validation, push, PR, journal Redmine recette) ; ❌ → rejeté.
+
+## Validation (ciblée + fail-fast)
+- **Ciblée** : n'exécuter que les tests/analyses des **fichiers touchés** (test PHP/phpcs/phpstan pour le contrôleur modifié ; vitest/tsc/lint pour le frontend) — ne PAS lancer `phing full-build` complet (lent). Les commandes sont dans `state/config.json` → `projects.<name>.validation`.
+- **Fail-fast** : `timeout` global (config `validation.timeout_seconds`, défaut 900 s) sur les runs `codex exec`. Si conteneur instable ou donnée DB absente (ex. `PaiementMethod 'MTNMoney'`), **rapporter la cause exacte et s'arrêter** — pas de retry, pas de hang, pas de push en masse.

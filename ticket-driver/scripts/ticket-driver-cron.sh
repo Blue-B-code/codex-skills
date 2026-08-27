@@ -1,9 +1,9 @@
 #!/bin/bash
 # ticket-driver cron wrapper — route selon le mode :
-#   auto    : corriger + push + report (codex exec)
-#   propose : le MODÈLE fait un résumé concis du fix, envoie l'approbation Telegram (✅/❌), ne pousse pas
+#   auto    : corriger + push + report (codex exec, timeout)
+#   propose : résumé/plan par le MODÈLE -> Telegram (✅/❌), ne pousse pas
 #   signal  : notifier uniquement
-# Verrou par projet (state/locks/<projet>) pour éviter les runs concurrents (codex exec long).
+# Verrou par projet (state/locks/<projet>). Timeout sur les runs codex.
 # RFBOT_DRY=1 => logge sans agir (test).
 set -euo pipefail
 SKILL_DIR="$HOME/.codex-local/skills/ticket-driver"
@@ -20,6 +20,11 @@ TS=$(date +%Y%m%d-%H%M%S)
 FLAGS=$(python3 - "$CONFIG" <<'PY'
 import json,sys
 cfg=json.load(open(sys.argv[1])); print(cfg.get("cron",{}).get("codex_flags","-s danger-full-access --dangerously-bypass-approvals-and-sandbox"))
+PY
+)
+TTL=$(python3 - "$CONFIG" <<'PY'
+import json,sys
+cfg=json.load(open(sys.argv[1])); print(cfg.get("validation",{}).get("timeout_seconds", 900))
 PY
 )
 projects=$(python3 - "$CONFIG" <<'PY'
@@ -89,8 +94,8 @@ PY
     if [ "${RFBOT_DRY:-0}" = "1" ]; then
       echo "[DRY-RUN] propose: codex exec -C $repo $FLAGS (résumé modèle concis)"
     else
-      "$CODEX" exec -C "$repo" $FLAGS \
-        "Using the ticket-driver skill in PROPOSE mode, process the items in $filt. For each mr_comment (review) item: write a CONCISE summary (max ~300 chars, French) of the fix to be done; write state/proposals/<project>_<mr>.md with markers PROJECT, MR, TITLE, URL, DISCUSSION, TICKET, MARK_KEY, MARK_SUB, MARK_ID, SUMMARY. For each sprint_ticket (feat) item: produce a CLEAR DETAILED IMPLEMENTATION PLAN (French, structured: contexte, étapes, fichiers, PR attendue, tests) from the ticket + project skill; write state/proposals/<project>_<ticket_id>.md with markers PROJECT, TICKET, TITLE, URL, MARK_KEY, MARK_SUB, MARK_ID, SUMMARY (=the plan). Then send ONE Telegram approval per item via scripts/tg.py send-approval (project, mr-or-ticket, title, url, summary). Do NOT implement, do NOT push, do NOT reply/summary, do NOT journal Redmine. Escalate non-actionable items."
+      timeout "$TTL" "$CODEX" exec -C "$repo" $FLAGS \
+        "Using the ticket-driver skill in PROPOSE mode, process the items in $filt. For each mr_comment (review): write a CONCISE summary (max ~300 chars, FR) of the fix; write state/proposals/<project>_<mr>.md (PROJECT, MR, TITLE, URL, DISCUSSION, TICKET, MARK_KEY, MARK_SUB, MARK_ID, SUMMARY). For each sprint_ticket (feat): write a CLEAR DETAILED IMPLEMENTATION PLAN (contexte, étapes, fichiers, PR, tests) from the ticket + project skill; write state/proposals/<project>_<ticket_id>.md (PROJECT, TICKET, TITLE, URL, MARK_KEY, MARK_SUB, MARK_ID, SUMMARY). Then send ONE Telegram approval per item via scripts/tg.py send-approval. Do NOT implement/push/report/journal. Escalate non-actionable. Fail-fast: max ~300 chars summary, no full-suite run."
       python3 - "$project" "$filt" <<'PY'
 import json, os, sys
 project, filt = sys.argv[1], sys.argv[2]
@@ -106,8 +111,8 @@ PY
     if [ "${RFBOT_DRY:-0}" = "1" ]; then
       echo "[DRY-RUN] auto: codex exec -C $repo $FLAGS avec $filt"
     else
-      "$CODEX" exec -C "$repo" $FLAGS \
-        "Using the ticket-driver skill, for the review feedback in $filt: apply the fix, run the project validation gate, commit and push, then report (reply/resolve/summary) on the MR/PR and journal the Redmine ticket. Mark items as processed afterwards. Escalate non-actionable/ambiguous/risky items."
+      timeout "$TTL" "$CODEX" exec -C "$repo" $FLAGS \
+        "Using the ticket-driver skill, for the items in $filt: apply the fix/feature, run TARGETED validation (changed files only, config validation cmds) with fail-fast (report cause if env broken), commit and push, then reply/resolve/summary + journal Redmine + mark-items. Escalate non-actionable/risqué."
     fi
   fi
 

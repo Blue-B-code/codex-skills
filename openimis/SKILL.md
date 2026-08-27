@@ -1,5 +1,5 @@
 ---
-name: openimis-feature
+name: openimis
 description: "Apply the standard git + PR workflow for a feature in OpenIMIS repos: main openIMIS (/home/y-note/openimis — frontend-packages modules and openimis-be-*_py backends: create feature-<n> from develop, commit once, push to ynote, open a PR to openimis develop with the description filled from the official openIMIS PR template) and OpenIMIS front-end modules under /home/y-note/openimis-comores and /home/y-note/openimis-csu (create feature-<n> from the correct base (develop-comores for Comores, test-csu for CSU), commit once, open the PR with the pr script, then fan out the same commit with the gff script to test-comores/main-comores for Comores or hotfix-csu/release-csu for CSU). Use when the user asks to develop an openimis feature (main repo, Comores or CSU), do 'le même travail'/'same work' in another module, or port a patch between modules."
 ---
 

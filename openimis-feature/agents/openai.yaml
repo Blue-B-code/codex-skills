@@ -1,4 +1,0 @@
-interface:
-  display_name: "OpenIMIS Feature Workflow"
-  short_description: "OpenIMIS feature branch & PR workflow (develop, Comores, CSU)"
-  default_prompt: "Use $openimis-feature to implement this feature in the openimis module: create the feature-<n> branch from develop, commit once, push to ynote, and open a PR to openimis develop with the description filled from the official openIMIS PR template (or use the Comores/CSU workflow with pr and gff when relevant)."

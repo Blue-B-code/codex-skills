@@ -1,22 +1,23 @@
 {
+  "_comment": "Example configuration for the ticket-driver skill. Replace every value with your own. No real credentials are stored here — tokens/keys are read from this config at runtime and should never be committed.",
   "cron": {
     "codex_flags": "-s danger-full-access --dangerously-bypass-approvals-and-sandbox",
     "interval_minutes": 10
   },
   "projects": {
-    "flownote": {
+    "my-project-a": {
       "default_branch": "develop",
       "host": "gitlab",
-      "me": "princesandjong777",
+      "me": "your-git-username",
       "mode": "propose",
-      "project_id": 85246367,
-      "project_path": "maxime.ngoe/flownote",
+      "project_id": 0,
+      "project_path": "your-org/your-project",
       "redmine": {
-        "project_id": 209,
-        "recette_assignee": "maxime ngoe",
+        "project_id": 0,
+        "recette_assignee": "Your Name",
         "recette_status": "A recetter"
       },
-      "repo_dir": "/home/y-note/flownote",
+      "repo_dir": "~/your-project",
       "validation": {
         "backend": {
           "cmds": [
@@ -30,79 +31,70 @@
           "cmds": [
             "npx tsc --noEmit",
             "npm run lint -- --quiet",
-            "npm run check:jsx-collisions",
             "npm run test"
           ],
-          "dir": "frontend-admin"
+          "dir": "frontend"
         }
       }
     },
-    "mi": {
+    "my-project-b": {
       "default_branch": "develop",
       "host": "gitlab",
-      "me": "princesandjong777",
+      "me": "your-git-username",
       "mode": "propose",
-      "project_id": 28683527,
-      "project_path": "maxime.ngoe/OrangeMoney",
+      "project_id": 0,
+      "project_path": "your-org/your-other-project",
       "redmine": {
-        "project_id": 170,
-        "recette_assignee": "maxime ngoe",
+        "project_id": 0,
+        "recette_assignee": "Your Name",
         "recette_status": "A recetter"
       },
-      "repo_dir": "/home/y-note/OrangeMoney/MobileInvoice",
+      "repo_dir": "~/your-other-project",
       "validation": {
-        "backend": {
-          "cmds": [
-            "vendor/bin/phing -buildfile build.xml full-build",
-            "vendor/bin/phing sast-analysis"
-          ],
-          "workdir": ""
-        },
-        "container": "orangemoney_web-mi",
+        "container": "your_dev_container",
         "frontend": {
           "cmds": [
             "npm run test:coverage",
             "npx tsc --noEmit",
-            "npm run lint:quality",
-            "npm run duplication"
+            "npm run lint:quality"
           ],
-          "workdir": "vite-frontend"
+          "workdir": "frontend"
         }
       }
     },
-    "openimis": {
+    "my-project-c": {
       "default_branch": "develop",
       "host": "redmine",
-      "me": "princesandjong777",
+      "me": "your-git-username",
       "mode": "propose",
       "redmine": {
-        "recette_assignee": "maxime ngoe",
+        "recette_assignee": "Your Name",
         "recette_status": "A recetter"
       },
-      "repo_dir": "/home/y-note/openimis"
+      "repo_dir": "~/my-project-c"
     }
   },
   "rag": {
-    "base_url": "https://flownote1-dev.bastion.y-note.cm",
+    "base_url": "https://your-rag-service.example.com",
     "enabled": false,
-    "note": "derri\u00e8re bastion + JWT RAG requis ; utilis\u00e9 uniquement pour g\u00e9n\u00e9rer des specs depuis un ticket"
+    "note": "Optional RAG backend used to generate specs from a ticket."
   },
   "redmine": {
-    "api_key": "REDMINE_API_KEY_VOTRE_CL\u00c9",
-    "base_url": "https://redmine.y-note.cm",
-    "me": "Paul Sandjong",
-    "me_id": 976,
-    "project_id": 199,
-    "sprint_prefix": "DH-OpenIMIS",
+    "api_key": "YOUR_REDMINE_API_KEY",
+    "base_url": "https://your-redmine.example.com",
+    "me": "Your Name",
+    "me_id": 0,
+    "project_id": 0,
+    "sprint_prefix": "YourSprintPrefix",
     "sprint_routes": {
-      "170": "mi",
-      "199": "openimis",
-      "209": "flownote"
+      "100": "my-project-a",
+      "101": "my-project-b",
+      "102": "my-project-c"
     },
-    "sprint_scan_project_id": 199
+    "sprint_scan_project_id": 0
   },
   "telegram": {
-    "bot_token": "TELEGRAM_BOT_TOKEN_EXEMPLE",
+    "bot_token": "YOUR_TELEGRAM_BOT_TOKEN",
     "chat_id": 0,
     "poll_interval": 3
   }

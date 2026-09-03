@@ -37,7 +37,7 @@ Strong in one tool of a family ⇒ fluent in the siblings (same mental model):
 - **codex-skills** — AI-assisted dev workflows
 
 ## Credibility
-- **OpenIMIS** (open source): 201 PRs / 129 merged / 32 modules — React frontend modules + Python/Django GraphQL backends + Android + Docker. Created the Ledger module; contributed a polygamous-family backend feature.
+- **OpenIMIS** (open source): 201 PRs / 129 merged / 32 modules — React frontend modules (openimis-fe-*) + Python/Django GraphQL backends (openimis-be-*): core, claim, insuree, ledger, invoice, policy, contribution, contract, etc. Created the Ledger module; contributed a polygamous-family backend feature.
 - **MI Platform** (employer, private): 45 MRs (33 merged) — Vite/Inertia migration, query services, security hardening.
 - **FlowNote** (employer, private): multi-domain AI agent platform — built the knowledge/retrieval layer powering the agents (ingestion/reading pipelines, S3, HMAC).
 

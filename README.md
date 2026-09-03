@@ -12,6 +12,7 @@ Each folder is a self-contained skill: it ships a `SKILL.md` (the skill's instru
 | **openimis** | Standard git + PR workflow for [OpenIMIS](https://openimis.org) modules: feature branch from `develop`, single commit, push, PR with the official openIMIS template; Comoros and CSU fan-out workflows. |
 | **mi** | Validation workflow for a Docker-based mobile-invoice stack (React + PHP): all tests and static analysis run inside the project's dev container. |
 | **flownote** | Validation and conventions for an async FastAPI backend + React/Vite admin frontend (TDD, i18n, ruff/mypy, vitest). |
+| **upwork-job-filter** | Evaluate Upwork/freelance job postings against the owner's real profile and return an explicit APPLY / SKIP / CONDITIONAL verdict with a fit table and reasons (optionally a draft proposal). Encodes the 2-minute filter, a ~$15/hr rate floor, red flags and keywords to seek/exclude. |
 
 ## Usage
 

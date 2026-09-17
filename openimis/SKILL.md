@@ -29,19 +29,40 @@ Avant de fanouter un changement vers les autres branches, le changement doit d'a
 - Ne lancer le fanout (`gff` / cherry-pick vers les autres cibles) qu'après validation explicite de l'utilisateur.
 - Ce principe s'applique à **tous** les cas de fanout : Comores (`test-comores`/`main-comores`), CSU (`hotfix-csu`/`release-csu`) et toute autre cible.
 
-## Workflow OpenIMIS principal (develop)
-1. Se placer sur `develop` à jour dans le module concerné :
-   - `git fetch origin --prune`
-   - `git checkout develop` puis `git pull origin develop`
+## Workflow OpenIMIS principal (develop) — 2 PRs par module
+
+Chaque module modifié reçoit **deux PRs successives** (gitflow interne Y-Note) :
+
+1. **PR de review** : `feature-<n>` (poussée sur `ynote`) → branche `develop` de `Y-Note-SAS/<repo>`. C'est la PR que le bot/la revue examine ; les corrections se font sur la branche de feature, dans cette même PR, jusqu'à validation.
+2. **PR de publication** : branche `develop` de `Y-Note-SAS/<repo>` → branche `develop` de `openimis/<repo>`, **une fois la PR de review mergée** dans la develop du fork.
+
+⚠️ On ne PR **jamais** directement `feature-<n>` vers `openimis:develop` (ancien flow) : la develop de ynote est le passage obligé, c'est elle qu'on merge dans openimis.
+
+### Étapes
+1. Partir de `origin/develop` à jour : `git fetch origin --prune` puis `git checkout -b feature-<n> origin/develop` (`n` = numéro de feature transmis par l'utilisateur, ex. `feature-37855`).
 2. **Working tree propre obligatoire** : vérifier `git status --porcelain`. S'il y a des changements non commités, ne pas les écraser : résumer ce qu'ils contiennent (`git status`, `git diff --stat`) et demander à l'utilisateur quoi en faire (stash, commit séparé, abandon, conserver).
-3. Créer la branche de feature depuis `develop` : `git checkout -b feature-<n>` (`n` = numéro de feature transmis par l'utilisateur, ex. `feature-37855`).
-4. Implémenter la feature puis committer en **un seul commit** (message descriptif, ex. `add unit tests for claim pickers`).
-5. Pousser vers `ynote` : `git push -u ynote feature-<n>`. Si le remote `ynote` est absent : `git remote add ynote https://github.com/Y-Note-SAS/<repo>.git`.
-6. Ouvrir la PR vers `origin develop` (repo `openimis/<module>`) **avec la description remplie depuis le template officiel openIMIS** — ne pas utiliser `--fill` :
-   - `gh pr create --repo openimis/<repo> --base develop --head Y-Note-SAS:feature-<n> --title "feature <n> — <description courte>" --body-file <fichier>`
-7. Vérifier la PR ouverte et le diff avant de rendre la main ; résumer avec le lien de la PR.
+3. Implémenter la feature puis committer en **un seul commit** (message descriptif, ex. `add unit tests for claim pickers`).
+4. Pousser vers `ynote` : `git push -u ynote feature-<n>`. Si le remote `ynote` est absent : `git remote add ynote https://github.com/Y-Note-SAS/<repo>.git`.
+5. **PR 1 — vers la develop du fork (review)** : vérifier d'abord que la branche existe sur le fork (`git ls-remote --heads ynote refs/heads/develop`) ; si elle est absente, la créer depuis `origin/develop` (`git push ynote refs/remotes/origin/develop:refs/heads/develop`). Puis, description remplie depuis le template officiel openIMIS (**jamais `--fill`**) :
+   - `gh pr create --repo Y-Note-SAS/<repo> --base develop --head feature-<n> --title "feature <n> — <description courte>" --body-file <fichier>`
+6. Revue / corrections dans la PR 1, puis merge de `feature-<n>` dans la develop du fork (revue humaine ou bot ; ne pas merger soi-même sauf demande explicite).
+7. **PR 2 — vers openimis (publication)**, seulement après le merge de la PR 1 :
+   - resynchroniser le fork si sa develop est en retard sur openimis (`git fetch origin --prune` puis merger `origin/develop` dans `ynote/develop`) afin que la PR ne contienne que le travail Y-Note ;
+   - `gh pr create --repo openimis/<repo> --base develop --head Y-Note-SAS:develop --title "feature <n> — <description courte>" --body-file <fichier>`
+8. Vérifier les PRs ouvertes et les diffs ; rendre la main avec les liens, **présentés séparément** :
+
+   ```
+   PRs vers Ynote
+   ---
+   - <repo> : <lien PR 1 (feature-<n> → ynote develop)>
+
+   PRs vers openimis
+   ---
+   - <repo> : <lien PR 2 (ynote develop → openimis develop)>
+   ```
 
 ### Template de description de PR openIMIS (obligatoire)
+Les **deux** PRs (vers la develop du fork et vers openimis) utilisent ce template, rempli honnêtement.
 Remplir chaque section du template officiel (source : `openimis/.github/PULL_REQUEST_TEMPLATE.md`) :
 
 ```
@@ -108,6 +129,9 @@ Quand une feature touche plusieurs modules (plusieurs PR liées à la même feat
 - Nommage des branches fanout : `feature-<n>-hotfix-csu` / `feature-<n>-release-csu`.
 
 ## Pièges connus
+- GitHub **refuse une PR sans commit** : la PR 2 (`ynote develop` → `openimis develop`) n'est possible qu'après le merge de la PR 1, sinon la branche de tête n'a rien de plus que la base.
+- Un fork `ynote` **peut ne pas avoir de branche `develop`** (cas constaté sur `openimis-fe-policy_js`, qui n'avait que `main` et des branches de feature) : la créer depuis `origin/develop` avant d'ouvrir la PR 1.
+- Une develop de fork peut être **en retard** sur `openimis/develop` (cas de `openimis-fe-contribution_plan_js` et `openimis-be-policy_py`) : la resynchroniser avant la PR 2 pour que le diff ne contienne que le travail Y-Note.
 - `gff` exige un working tree propre et revient sur la branche source à la fin (trap).
 - Ne pas relancer `gff` inutilement sur une branche déjà fanoutée : le script reset + re-cherry-pick (nouveaux SHAs) + force-push.
 - Le script `pr` crée la PR avec `--fill` (description = liste des commits) : dans le workflow OpenIMIS principal, ne pas l'utiliser pour la description — créer la PR avec `gh pr create --body-file` rempli depuis le template openIMIS.

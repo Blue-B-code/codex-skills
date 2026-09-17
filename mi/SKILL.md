@@ -1,12 +1,21 @@
 ---
 name: mi
-description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack locale Docker, branche de démarrage develop-sp-local, validation obligatoire du code dans le conteneur orangemoney_web-mi (PHPUnit, Vitest, phpcs, phpstan, phpmd, eslint-vite, tsc, jscpd), et tests fonctionnels UILicious (manifeste ci/uilicious-tests.json, exécution via uilicious-cli sur le projet Paynote-MI). À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice : diagnostiquer la stack locale, valider du code PHP/TS/React, ou ajouter/fixer/valider des tests fonctionnels UILicious."
+description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack locale Docker, branche de démarrage develop-sp-local, validation obligatoire du code dans le conteneur orangemoney_web-mi (PHPUnit, Vitest, phpcs, phpstan, phpmd, eslint-vite, tsc, jscpd), et tests fonctionnels UILicious (manifeste ci/uilicious-tests.json, exécution via uilicious-cli sur le projet Paynote-MI). À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice : diagnostiquer la stack locale, valider du code PHP/TS/React, ou ajouter/fixer/valider des tests fonctionnels UILicious, ou gérer les données de recette sur une branche donnée : passer des factures en « payé » (branche + ids de factures) et mettre un solde sur une entreprise (branche + company + méthode de paiement + montant)."
 ---
 
 # Projet MI (MobileInvoice) — stack locale, validation QA et tests fonctionnels
 
 > **Reporting** : si ce travail vient d'un ticket Redmine, après implémentation/PR suivre le skill **ticket-driver** pour le reporting (statut recette, assignataire, capture) et l'envoi en recette.
 
+
+## Données de recette (solde d'entreprise, statut des factures)
+
+Deux tâches récurrentes, à réaliser sur **la branche fournie par l'utilisateur** :
+**passer des factures en « payé »** (entrées : branche + ids de factures) et **mettre un solde sur
+une entreprise** (entrées : branche + id company + méthode de paiement + montant). La commande SQL
+s'écrit en clair dans `MobileInvoice/conf/entrypoint-cron.sh` (appliquée à chaque déploiement,
+jamais en production), puis commit + push sur cette branche + Jenkins `Deploy`.
+Procédure, blocs de code et vérifs : **`reference/recette-solde-et-factures.md`**.
 
 ## Stack locale MI (Docker)
 

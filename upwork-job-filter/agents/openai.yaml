@@ -1,0 +1,4 @@
+interface:
+  display_name: "Upwork Job Filter"
+  short_description: "Filter Upwork job postings: APPLY/SKIP verdict + proposal."
+  default_prompt: "Use $upwork-job-filter to evaluate this Upwork job posting and tell me whether to apply: <paste the job>"

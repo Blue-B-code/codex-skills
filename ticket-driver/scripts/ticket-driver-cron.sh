@@ -6,7 +6,7 @@
 # Verrou par projet (state/locks/<projet>). Timeout sur les runs codex.
 # RFBOT_DRY=1 => logge sans agir (test).
 set -euo pipefail
-SKILL_DIR="$HOME/.codex-local/skills/ticket-driver"
+SKILL_DIR="$HOME/.codex/skills/ticket-driver"
 CONFIG="$SKILL_DIR/state/config.json"
 RFBOT="$SKILL_DIR/scripts/rfbot.py"
 TG="$SKILL_DIR/scripts/tg.py"
@@ -51,7 +51,7 @@ PY
 import json, os, sys
 project, out, filt = sys.argv[1], sys.argv[2], sys.argv[3]
 items = json.load(open(out))
-ap = os.path.expanduser("~/.codex-local/skills/ticket-driver/state/approvals.json")
+ap = os.path.expanduser("~/.codex/skills/ticket-driver/state/approvals.json")
 appr = {}
 if os.path.exists(ap): appr = json.load(open(ap))
 sel = [i for i in items.get("items", []) if ("%s:%s" % (project, i.get("key"))) not in appr]
@@ -84,7 +84,7 @@ PY
 import json, os, sys
 project, filt = sys.argv[1], sys.argv[2]
 items = json.load(open(filt))
-ap = os.path.expanduser("~/.codex-local/skills/ticket-driver/state/approvals.json")
+ap = os.path.expanduser("~/.codex/skills/ticket-driver/state/approvals.json")
 appr = {}
 if os.path.exists(ap): appr = json.load(open(ap))
 for i in items["items"]: appr["%s:%s" % (project, i["key"])] = {"status": "signaled"}
@@ -100,7 +100,7 @@ PY
 import json, os, sys
 project, filt = sys.argv[1], sys.argv[2]
 items = json.load(open(filt))
-ap = os.path.expanduser("~/.codex-local/skills/ticket-driver/state/approvals.json")
+ap = os.path.expanduser("~/.codex/skills/ticket-driver/state/approvals.json")
 appr = {}
 if os.path.exists(ap): appr = json.load(open(ap))
 for i in items["items"]: appr["%s:%s" % (project, i["key"])] = {"status": "proposed"}

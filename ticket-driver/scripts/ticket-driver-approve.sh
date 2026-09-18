@@ -2,7 +2,7 @@
 # Finalise après ✅ : implémente le fix, valide (CIBLÉE + timeout), pousse, répond/résout, journalise.
 # Fail-fast : si l'environnement est cassé (conteneur instable / donnée DB manquante), on reporte et on s'arrête.
 set -euo pipefail
-SKILL_DIR="$HOME/.codex-local/skills/ticket-driver"
+SKILL_DIR="$HOME/.codex/skills/ticket-driver"
 CONFIG="$SKILL_DIR/state/config.json"
 CODEX=/home/y-note/bin/codex
 PROJECT="${1:?projet requis}"

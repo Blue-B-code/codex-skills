@@ -28,6 +28,14 @@ Traiter un ticket Redmine (fix de revue OU feature) de la prise en main jusqu'à
 4. **Marquer** : `mark-key --project <p> --key <key> --sub <sub> --id <id>` (dédup).
 5. **Escalade** : retour non-actionnable/ambigu/risqué → ne pas répondre/résoudre ; le résumer, le marquer comme traité.
 
+## Findings de revue (bot automatique ou reviewer) — OBLIGATOIRE
+Dès qu'une PR/MR porte des findings de revue (résumé du bot + commentaires ligne à ligne) :
+1. **Lister tous les findings** (commentaires de la PR/MR et commentaires de revue attachés à un fichier/une ligne).
+2. **Traiter seulement les pertinents** (bug réel, régression, non-conformité au contrat, sécurité) : correction sur la branche de la PR/MR, gate de validation du skill projet, push sur la même branche, jamais de nouvelle branche.
+3. **Pour chaque finding non pertinent : répondre dans la PR/MR en une phrase très courte** donnant la raison (convention du core, comportement voulu, pattern déjà utilisé ailleurs, cas impossible, hors périmètre du module…). Répondre **en fil** quand le finding est un commentaire de revue (`pulls/<n>/comments/<id>/replies`), sinon en commentaire de la PR/MR.
+4. **Une phrase, pas plus** : pas de justification détaillée, pas de débat avec le bot.
+5. **Aucun finding sans suite** : soit corrigé, soit répondu brièvement.
+
 ## Fichiers d'état
 - `state/projects.json` : curseurs des notes/journaux traités (dédup).
 - `state/approvals.json` : statut `proposed`/`approved`/`rejected`/`signaled` par item.

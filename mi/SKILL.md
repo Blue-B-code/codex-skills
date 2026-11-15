@@ -66,12 +66,15 @@ Toute validation se fait **dans le conteneur `orangemoney_web-mi`** (le code loc
 - Manifeste : `ci/uilicious-tests.json` (groupes de tests exécutés dans l'ordre sur un même worker ; le pipeline répartit les groupes entre workers).
 - Exécution CI : stage « UI-Licious Tests » du `jenkinsfile-dev` → `uilicious-cli run "Paynote-MI" <path> --key <ACCESS_KEY>` ; rapports JSON dans `reports/ui-licious/` puis JUnit (`reports/uilicious-junit.xml`).
 - Synchronisation cloud : `ci/upload-uilicious-tests.sh` (git = source de vérité, pousse les tests vers le projet cloud « Paynote-MI »).
-- **URL de recette (à mettre dans le ticket Redmine pour la testeuse)** : passer par le **bastion**,
-  jamais par l'instance directe — `https://mi-symfony-test-<branche>.bastion.y-note.cm/<locale>/<chemin>`
+- **URL de recette (celle à mettre dans le ticket Redmine, pour la testeuse) : le bastion.**
+  `https://mi-symfony-test-<branche>.bastion.y-note.cm/<locale>/<chemin>`
   (ex. `https://mi-symfony-test-develop-sp.bastion.y-note.cm/fr/admin/mass-payment/list/`).
-  Raison : `<branche>.mitest.ynote.africa` tombe souvent ; le bastion (Teleport) route vers le port
-  local dédié de la branche (`ci/branch-ports.txt`, ex. `develop-sp 5302`) et reste accessible.
-  Même URL pour rejouer les tests fonctionnels à la main quand on cible cette instance.
+  Raison : l'instance directe `<branche>.mitest.ynote.africa` tombe souvent ; le bastion (Teleport)
+  route vers le port local dédié de la branche (`ci/branch-ports.txt`, ex. `develop-sp 5302`).
+- **Exécution des tests fonctionnels (CI et agent) : l'URL directe, jamais le bastion.**
+  `https://<branche>.mitest.ynote.africa` — l'agent n'a pas accès au bastion, et UILicious est
+  autorisé à taper le domaine direct. Les scripts restent paramétrables via
+  `I.goTo((DATA.url || "https://mitest.ynote.africa") + "/fr/")`.
 - **Règles** :
   - Si un test fonctionnel n'existe pas pour une fonctionnalité : l'ajouter **et le faire valider** (exécution réelle).
   - Si un test fonctionnel est cassé : le fixer **et le faire valider**.

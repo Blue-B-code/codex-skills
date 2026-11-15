@@ -8,6 +8,18 @@ description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack 
 > **Reporting** : si ce travail vient d'un ticket Redmine, après implémentation/PR suivre le skill **ticket-driver** pour le reporting (statut recette, assignataire, capture) et l'envoi en recette.
 
 
+## Workflow git — une seule branche d'intégration : `develop-sp`
+
+- **Toujours travailler sur une branche `feature-<ticket>`**, jamais directement sur `develop-sp`.
+- `develop-sp` est **la seule branche d'intégration** : on y merge les `feature-*` terminées (merge
+  `--no-ff`, conflits résolus, validation du code touché relancée), puis on la pousse sur le remote.
+- Le job Jenkins builde **`develop-sp`** : chaque feature mergée y apporte ses métriques, ce qui
+  donne une vue **continue** de la qualité sur l'ensemble des tickets intégrés.
+- Déploiement : `DEPLOY_ACTION=Deploy` + `BRANCH_ENVIRONMENT=develop-sp` + `BRANCH_STACK=true` →
+  l'instance de recette porte **plusieurs tickets à la fois**, que la testeuse peut recetter dans la
+  même passe. URL à annoncer : voir la règle « URL de recette » ci-dessous.
+- Pas de force-push sur `develop-sp` : si elle a divergé, on merge (jamais de reset).
+
 ## Données de recette (solde d'entreprise, statut des factures)
 
 Deux tâches récurrentes, à réaliser sur **la branche fournie par l'utilisateur** :
@@ -54,8 +66,17 @@ Toute validation se fait **dans le conteneur `orangemoney_web-mi`** (le code loc
 - Manifeste : `ci/uilicious-tests.json` (groupes de tests exécutés dans l'ordre sur un même worker ; le pipeline répartit les groupes entre workers).
 - Exécution CI : stage « UI-Licious Tests » du `jenkinsfile-dev` → `uilicious-cli run "Paynote-MI" <path> --key <ACCESS_KEY>` ; rapports JSON dans `reports/ui-licious/` puis JUnit (`reports/uilicious-junit.xml`).
 - Synchronisation cloud : `ci/upload-uilicious-tests.sh` (git = source de vérité, pousse les tests vers le projet cloud « Paynote-MI »).
+- **URL de recette (à mettre dans le ticket Redmine pour la testeuse)** : passer par le **bastion**,
+  jamais par l'instance directe — `https://mi-symfony-test-<branche>.bastion.y-note.cm/<locale>/<chemin>`
+  (ex. `https://mi-symfony-test-develop-sp.bastion.y-note.cm/fr/admin/mass-payment/list/`).
+  Raison : `<branche>.mitest.ynote.africa` tombe souvent ; le bastion (Teleport) route vers le port
+  local dédié de la branche (`ci/branch-ports.txt`, ex. `develop-sp 5302`) et reste accessible.
+  Même URL pour rejouer les tests fonctionnels à la main quand on cible cette instance.
 - **Règles** :
   - Si un test fonctionnel n'existe pas pour une fonctionnalité : l'ajouter **et le faire valider** (exécution réelle).
   - Si un test fonctionnel est cassé : le fixer **et le faire valider**.
   - Validation locale possible (sans déployer sur mitest) : tunnel `cloudflared tunnel --url http://nginx-test` puis `uilicious-cli run "Paynote-MI" "<path>" --key <KEY> --dataObject '{"url":"https://<tunnel>.trycloudflare.com"}'` ; les tests utilisent `I.goTo((DATA.url || "https://mitest.ynote.africa") + "/fr/")` pour être paramétrables et rétro-compatibles CI.
-  - La clé UILicious est fournie par l'utilisateur (ne jamais la committer ni la stocker dans le repo).
+  - La clé UILicious est fournie par l'utilisateur et rangée **hors dépôt** dans
+    `reference/uilicious-access.md` (chmod 600) :
+    `export UILICIOUS_ACCESSKEY=$(sed -n 's/^key=//p' /home/y-note/.codex/skills/mi/reference/uilicious-access.md)`.
+    Ne jamais la committer ni la stocker dans le repo.

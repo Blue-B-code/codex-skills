@@ -20,6 +20,31 @@ description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack 
   même passe. URL à annoncer : voir la règle « URL de recette » ci-dessous.
 - Pas de force-push sur `develop-sp` : si elle a divergé, on merge (jamais de reset).
 
+## Régression d'un quality gate (PHPMD, jscpd, PHPStan…) sur `develop-sp`
+
+Procédure quand le build de `develop-sp` annonce `X > Y (was Y)` :
+
+1. **Localiser la source, ne pas deviner** — comparer les rapports du build fautif et du précédent
+   (ces rapports sont archivés par le job) :
+   ```bash
+   curl -u "$JENKINS_AUTH" -o /tmp/pmd_new.xml \
+     "$JENKINS/job/MobileInvoice-Test-Paul/<build>/artifact/reports/pmd.xml"
+   ```
+   Puis agréger par `(fichier, règle)` et ne garder que les deltas (les numéros de ligne bougent,
+   ils ne sont pas fiables). Pour jscpd : lancer `npx jscpd src --threshold 0 --min-tokens 50
+   --reporters json --output /tmp/now`, faire de même sur `develop` (baseline) et diffuser les
+   **paires de fichiers** — c'est la paire qui identifie la feature fautive.
+2. **Corriger sur la branche `feature-*` qui a introduit la violation**, pas sur `develop-sp`.
+   Puis pousser la branche et la merger dans `develop-sp`.
+3. **Ne jamais faire baisser le seuil, ni exclure des fichiers du périmètre** pour passer le gate :
+   le correctif est un vrai changement de code (extraction d'un helper, import explicite,
+   `@SuppressWarnings` ciblé et justifié quand la règle ne s'applique pas).
+4. **Vérifier localement avant de pousser** : relancer l'outil sur le périmètre et retrouver la
+   valeur de la baseline (`phpcs`/`phpmd` sur les fichiers touchés, `npx jscpd src` → nombre de
+   clones identique ou inférieur à `develop`).
+5. Une fois `develop-sp` mergée et poussée, relancer le build Jenkins et contrôler la ligne
+   `Checking Regression vs Previous Build` : tout doit être `✅ (unchanged)` ou en amélioration.
+
 ## Données de recette (solde d'entreprise, statut des factures)
 
 Deux tâches récurrentes, à réaliser sur **la branche fournie par l'utilisateur** :

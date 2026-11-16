@@ -45,6 +45,25 @@ Procédure quand le build de `develop-sp` annonce `X > Y (was Y)` :
 5. Une fois `develop-sp` mergée et poussée, relancer le build Jenkins et contrôler la ligne
    `Checking Regression vs Previous Build` : tout doit être `✅ (unchanged)` ou en amélioration.
 
+### Faut-il relancer un build de métriques après un merge ?
+
+Non par défaut. Un build Jenkins complet coûte ~40-50 min ; on ne le lance que si des **compteurs**
+peuvent bouger. Règle :
+
+- **Pas de build** quand le merge n'apporte que du code déjà vert ailleurs (`develop` mergé dans une
+  feature, traductions, tests UILicious) et que les compteurs locaux sont au niveau ou en dessous de
+  la baseline. On le prouve sur `develop-sp` fusionnée :
+  ```bash
+  vendor/bin/phpmd src xml build/phpmd.xml | grep -c '<violation '        # attendu <= baseline
+  cd vite-frontend && npx jscpd src --threshold 0 --min-tokens 50 --reporters json --output /tmp/j
+  ```
+- **Build nécessaire** dès qu'on ajoute/modifie du code (PHP ou TS/React), qu'un compteur mesuré
+  augmente, ou que la fusion change un fichier hors périmètre déjà connu (nouveau contrôleur, nouvel
+  écran) : c'est le seul moyen de voir les gates complets (couverture, tests, gitleaks) et la ligne
+  `Checking Regression vs Previous Build`.
+- Dans les deux cas, `phpunit --filter` sur les contrôleurs touchés + `vitest run` complet restent
+  obligatoires avant de pousser.
+
 ## Données de recette (solde d'entreprise, statut des factures)
 
 Deux tâches récurrentes, à réaliser sur **la branche fournie par l'utilisateur** :

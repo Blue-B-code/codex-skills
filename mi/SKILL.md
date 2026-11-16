@@ -48,21 +48,24 @@ Procédure quand le build de `develop-sp` annonce `X > Y (was Y)` :
 ### Faut-il relancer un build de métriques après un merge ?
 
 Non par défaut. Un `DEPLOY_ACTION=Build` (tests + qualité de code, sans déploiement ni UI-Licious)
-prend ~15 min ; c'est un `Deploy` complet, avec la suite fonctionnelle, qui monte à ~45-50 min. Règle :
+prend ~15 min ; un `Deploy` complet, avec la suite fonctionnelle, monte à ~45-50 min.
 
-- **Pas de build** quand les seuls changements viennent de **`develop`** (déjà vert dans son propre
-  build) — traductions, tests UILicious, refactors déjà mesurés — et que les compteurs locaux sont au
-  niveau ou en dessous de la baseline. On le prouve sur `develop-sp` fusionnée :
-  ```bash
-  vendor/bin/phpmd src xml build/phpmd.xml | grep -c '<violation '        # attendu <= baseline
-  cd vite-frontend && npx jscpd src --threshold 0 --min-tokens 50 --reporters json --output /tmp/j
-  ```
-- **Build nécessaire** dès qu'on ajoute/modifie du code à nous (PHP ou TS/React), qu'un compteur
-  mesuré augmente, ou que la fusion touche un fichier hors périmètre déjà connu (nouveau contrôleur,
-  nouvel écran) : c'est le seul moyen de voir les gates complets (couverture, tests, gitleaks) et la
-  ligne `Checking Regression vs Previous Build`.
-- Dans les deux cas, `phpunit --filter` sur les contrôleurs touchés + `vitest run` complet restent
-  obligatoires avant de pousser.
+- **Pas de build** quand les seuls changements viennent de `develop` (déjà vert dans son build) **et
+  que les compteurs concernés par ce merge, mesurés en local, ne dépassent pas ceux du dernier build
+  vert** — lancer les outils du tableau ci-dessous selon les fichiers touchés (PHP →
+  phpstan/phpmd/phpcs/phpcpd ; front → tsc/eslint/jscpd ; aucun fichier de code → rien).
+
+| Fichiers touchés par le merge | Outils à lancer en local (compteur à comparer à la baseline) |
+|---|---|
+| PHP (`MobileInvoice/src/`) | `vendor/bin/phpstan analyse src` · `vendor/bin/phpmd src xml build/phpmd.xml` · `vendor/bin/phpcs` · `vendor/bin/phpcpd` |
+| Front (`MobileInvoice/vite-frontend/src`) | `npx tsc --noEmit` · `npx eslint src --ext .ts,.tsx` · `npx jscpd src --threshold 0 --min-tokens 50` |
+| JS legacy (`MobileInvoice/assets`) | `npx eslint assets --config .eslintrc.json` |
+| Traductions / documentation seulement | rien à mesurer |
+
+- Réciproquement, un build est nécessaire dès qu'il y a du **code à nous** ou qu'un compteur dépasse
+  la baseline : la couverture, le nombre de tests et gitleaks ne se déduisent pas de ces compteurs.
+- Dans tous les cas : `phpunit --filter` sur les contrôleurs touchés + `vitest run` complet avant de
+  pousser.
 
 ## Données de recette (solde d'entreprise, statut des factures)
 

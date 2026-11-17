@@ -69,11 +69,15 @@ Quand le build annonce `X > Y (was Y)` :
 
 ## Tests fonctionnels UILicious
 
-- Les exécuter sur **https://develop-sp.mitest.ynote.africa/** (ou l'URL précisée dans la demande).
-  Scripts : `tests/functional/uilicious/`, manifeste `ci/uilicious-tests.json`.
-- Un test fonctionnel manquant pour une fonctionnalité s'ajoute **et se fait valider** ; un test cassé
-  se corrige **et se fait valider**.
-- La clé UILicious est fournie par l'utilisateur (variable `UILICIOUS_ACCESSKEY`) : jamais commitée.
+- Cible : **https://develop-sp.mitest.ynote.africa/** ou l'URL précisée dans la demande (les scripts lisent
+  `DATA.url`, repli `https://mitest.ynote.africa`).
+- Clé : `ticket-driver/state/config.json` → `uilicious.access_key` (hors dépôt, jamais commitée) :
+  `export UILICIOUS_ACCESSKEY=$(python3 -c "import json;print(json.load(open('/home/y-note/.codex/skills/ticket-driver/state/config.json'))['uilicious']['access_key'])")`
+- Synchroniser les tests versionnés (git = source de vérité) : `./ci/upload-uilicious-tests.sh`
+- Exécuter un test : `npx uilicious-cli run "Paynote-MI" "<Groupe/Test>" --key "$UILICIOUS_ACCESSKEY" --dataObject '{"url":"https://develop-sp.mitest.ynote.africa"}'`
+- Un test manquant s'ajoute **et se fait valider** ; un test cassé se corrige **et se fait valider**.
+- Les groupes de `ci/uilicious-tests.json` tournent **dans l'ordre** (état métier partagé) — ex. `invoice` :
+  CreationFacture → invoiceInformationPage → Deposit → InvoicePaymentPage → EncaissementAdmin → CorrectionAnnomalieFactures.
 
 ## Stack locale
 

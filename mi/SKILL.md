@@ -1,137 +1,85 @@
 ---
 name: mi
-description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack locale Docker, branche de démarrage develop-sp-local, validation obligatoire du code dans le conteneur orangemoney_web-mi (PHPUnit, Vitest, phpcs, phpstan, phpmd, eslint-vite, tsc, jscpd), et tests fonctionnels UILicious (manifeste ci/uilicious-tests.json, exécution via uilicious-cli sur le projet Paynote-MI). À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice : diagnostiquer la stack locale, valider du code PHP/TS/React, ou ajouter/fixer/valider des tests fonctionnels UILicious, ou gérer les données de recette sur une branche donnée : passer des factures en « payé » (branche + ids de factures) et mettre un solde sur une entreprise (branche + company + méthode de paiement + montant)."
+description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : workflow git (feature → develop-sp), validation obligatoire avec les commandes exactes de la CI dans le conteneur orangemoney_web-mi (phing, Vitest, eslint, tsc, jscpd), régressions de quality gates et tests fonctionnels UILicious. À utiliser pour tout travail sur /home/y-note/OrangeMoney/MobileInvoice."
 ---
 
-# Projet MI (MobileInvoice) — stack locale, validation QA et tests fonctionnels
+# Projet MI (MobileInvoice) — workflow, validation, tests
 
-> **Reporting** : si ce travail vient d'un ticket Redmine, après implémentation/PR suivre le skill **ticket-driver** pour le reporting (statut recette, assignataire, capture) et l'envoi en recette.
+> **Reporting** : si le travail vient d'un ticket Redmine, suivre le skill **ticket-driver** pour le
+> reporting (statut, assignataire, capture, envoi en recette).
 
+## Workflow git
 
-## Workflow git — une seule branche d'intégration : `develop-sp`
-
-- **Toujours travailler sur une branche `feature-<ticket>`**, jamais directement sur `develop-sp`.
-- `develop-sp` est **la seule branche d'intégration** : on y merge les `feature-*` terminées (merge
-  `--no-ff`, conflits résolus, validation du code touché relancée), puis on la pousse sur le remote.
-- Le job Jenkins builde **`develop-sp`** : chaque feature mergée y apporte ses métriques, ce qui
-  donne une vue **continue** de la qualité sur l'ensemble des tickets intégrés.
-- Déploiement : `DEPLOY_ACTION=Deploy` + `BRANCH_ENVIRONMENT=develop-sp` + `BRANCH_STACK=true` →
-  l'instance de recette porte **plusieurs tickets à la fois**, que la testeuse peut recetter dans la
-  même passe. URL à annoncer : voir la règle « URL de recette » ci-dessous.
-- Pas de force-push sur `develop-sp` : si elle a divergé, on merge (jamais de reset).
 - Une `feature-*` part de `develop` et ne merge que `develop` — **jamais `develop-sp`** (c'est un
   puits : elle reçoit des merges, elle n'en alimente aucune).
-- Une feature ne dépend jamais d'une autre feature. Si du code commun (socle, helpers) naît dans une
-  feature, on le **recopie à l'identique** dans les autres features en cours : les merges resteront
-  sans conflit, et chaque branche reste testable. Le partage durable, lui, passe par `develop`.
+- `develop-sp` est **la seule branche d'intégration** : on y merge les features terminées (conflits
+  résolus, validation relancée) et on la pousse. Jenkins la builde en continu.
+- Déploiement : `DEPLOY_ACTION=Deploy` + `BRANCH_ENVIRONMENT=develop-sp` + `BRANCH_STACK=true`.
+  L'instance porte plusieurs tickets à la fois → la testeuse recette en une passe.
+- Une feature ne dépend jamais d'une autre : si du code commun (socle, helpers) naît dans une feature,
+  on le recopie **à l'identique** dans les autres features en cours (merges sans conflit, chaque
+  branche reste testable). Le partage durable passe par `develop`.
+- Jamais de force-push sur `develop-sp` : si elle a divergé, on merge.
 
-## Régression d'un quality gate (PHPMD, jscpd, PHPStan…) sur `develop-sp`
+## Validation — commandes exactes de la CI, dans le conteneur
 
-Procédure quand le build de `develop-sp` annonce `X > Y (was Y)` :
+Le code local est monté dans `orangemoney_web-mi` sous `/var/www/mobileinvoice`. **Jamais de
+validation sur l'hôte** (dépendances différentes) ni de commande approximative : ce sont ces
+commandes-là que la CI exécute.
 
-1. **Localiser la source, ne pas deviner** — comparer les rapports du build fautif et du précédent
-   (ces rapports sont archivés par le job) :
-   ```bash
-   curl -u "$JENKINS_AUTH" -o /tmp/pmd_new.xml \
-     "$JENKINS/job/MobileInvoice-Test-Paul/<build>/artifact/reports/pmd.xml"
-   ```
-   Puis agréger par `(fichier, règle)` et ne garder que les deltas (les numéros de ligne bougent,
-   ils ne sont pas fiables). Pour jscpd : lancer `npx jscpd src --threshold 0 --min-tokens 50
-   --reporters json --output /tmp/now`, faire de même sur `develop` (baseline) et diffuser les
-   **paires de fichiers** — c'est la paire qui identifie la feature fautive.
-2. **Corriger sur la branche `feature-*` qui a introduit la violation**, pas sur `develop-sp`.
-   Puis pousser la branche et la merger dans `develop-sp`.
-3. **Ne jamais faire baisser le seuil, ni exclure des fichiers du périmètre** pour passer le gate :
-   le correctif est un vrai changement de code (extraction d'un helper, import explicite,
-   `@SuppressWarnings` ciblé et justifié quand la règle ne s'applique pas).
-4. **Vérifier localement avant de pousser** : relancer l'outil sur le périmètre et retrouver la
-   valeur de la baseline (`phpcs`/`phpmd` sur les fichiers touchés, `npx jscpd src` → nombre de
-   clones identique ou inférieur à `develop`).
-5. Une fois `develop-sp` mergée et poussée, relancer le build Jenkins et contrôler la ligne
-   `Checking Regression vs Previous Build` : tout doit être `✅ (unchanged)` ou en amélioration.
+```bash
+# PHP — stages « Phing full-build » + « SAST »
+docker exec -u www-data -e HOME=/tmp -w /var/www/mobileinvoice orangemoney_web-mi \
+  bash -c "vendor/bin/phing -buildfile build.xml full-build && vendor/bin/phing sast-analysis"
 
-### Faut-il relancer un build de métriques après un merge ?
+# Tests front — stage « JS Unit Tests »
+docker exec -u www-data -e HOME=/tmp -w /var/www/mobileinvoice/vite-frontend orangemoney_web-mi \
+  bash -c "npm run test:coverage"
 
-Non par défaut. Un `DEPLOY_ACTION=Build` (tests + qualité de code, sans déploiement ni UI-Licious)
-prend ~15 min ; un `Deploy` complet, avec la suite fonctionnelle, monte à ~45-50 min.
+# Qualité front — stage « JS Quality Analysis »
+docker exec -u www-data -e HOME=/tmp -w /var/www/mobileinvoice/vite-frontend orangemoney_web-mi \
+  bash -c "npx eslint src --ext .ts,.tsx -f checkstyle -o ../build/logs/eslint-vite.xml; npx tsc --noEmit; npx jscpd src --threshold 0 --min-tokens 50 --reporters json,xml --output ../build/logs/jscpd-vite/"
+```
 
-- **Pas de build** quand les seuls changements viennent de `develop` (déjà vert dans son build) **et
-  que les compteurs concernés par ce merge, mesurés en local, ne dépassent pas ceux du dernier build
-  vert** — lancer les outils du tableau ci-dessous selon les fichiers touchés (PHP →
-  phpstan/phpmd/phpcs/phpcpd ; front → tsc/eslint/jscpd ; aucun fichier de code → rien).
+- Cibler d'abord le code touché (`vendor/bin/phpunit --filter <Classe>`, `npx vitest run <fichier>`),
+  puis les commandes complètes ci-dessus avant de pousser.
+- Ne jamais conclure « propre » sans avoir couvert le code modifié ; ne jamais désactiver, masquer ou
+  contourner une règle. Un faux positif se remonte à l'utilisateur, il tranche.
 
-| Fichiers touchés par le merge | Outils à lancer en local (compteur à comparer à la baseline) |
-|---|---|
-| PHP (`MobileInvoice/src/`) | `vendor/bin/phpstan analyse src` · `vendor/bin/phpmd src xml build/phpmd.xml` · `vendor/bin/phpcs` · `vendor/bin/phpcpd` |
-| Front (`MobileInvoice/vite-frontend/src`) | `npx tsc --noEmit` · `npx eslint src --ext .ts,.tsx` · `npx jscpd src --threshold 0 --min-tokens 50` |
-| JS legacy (`MobileInvoice/assets`) | `npx eslint assets --config .eslintrc.json` |
-| Traductions / documentation seulement | rien à mesurer |
+## Régressions de quality gates
 
-- Réciproquement, un build est nécessaire dès qu'il y a du **code à nous** ou qu'un compteur dépasse
-  la baseline : la couverture, le nombre de tests et gitleaks ne se déduisent pas de ces compteurs.
-- Dans tous les cas : `phpunit --filter` sur les contrôleurs touchés + `vitest run` complet avant de
-  pousser.
+Quand le build annonce `X > Y (was Y)` :
 
-## Données de recette (solde d'entreprise, statut des factures)
+1. Comparer le rapport du build fautif avec le précédent (archivés par le job) et agréger par
+   `(fichier, règle)` — les numéros de ligne bougent, ils ne sont pas fiables. Pour jscpd, comparer
+   les **paires de fichiers** avec le rapport de `develop`.
+2. Corriger sur la branche `feature-*` qui a introduit la violation, puis la merger dans `develop-sp`.
+3. Ne jamais baisser un seuil ni exclure des fichiers : le correctif est du code (helper partagé,
+   import explicite, `@SuppressWarnings` ciblé et justifié).
+4. Relancer le build et vérifier `Checking Regression vs Previous Build` : `✅ (unchanged)` ou mieux.
 
-Deux tâches récurrentes, à réaliser sur **la branche fournie par l'utilisateur** :
-**passer des factures en « payé »** (entrées : branche + ids de factures) et **mettre un solde sur
-une entreprise** (entrées : branche + id company + méthode de paiement + montant). La commande SQL
-s'écrit en clair dans `MobileInvoice/conf/entrypoint-cron.sh` (appliquée à chaque déploiement,
-jamais en production), puis commit + push sur cette branche + Jenkins `Deploy`.
-Procédure, blocs de code et vérifs : **`reference/recette-solde-et-factures.md`**.
+## Faut-il relancer un build ?
 
-## Stack locale MI (Docker)
+`DEPLOY_ACTION=Build` (tests + qualité) ≈ 15 min ; un `Deploy` complet ≈ 45-50 min.
 
-- Repo : `/home/y-note/OrangeMoney/MobileInvoice` (le code est monté dans le conteneur `orangemoney_web-mi` sous `/var/www/mobileinvoice`).
-- Conteneurs de la stack : `nginx-test` (sert l'application : nginx + fastcgi vers `web-test`), `orangemoney_web-mi` (php-fpm, `web-test`), `cron-test`, `dynamodb-local`, `orangemoney_db-mi`, `maildev_docker_symfony--mi` (capture les emails envoyés par l'app), `phpmyadmin_orangemoney-mi`.
-- L'application locale est accessible via `nginx-test` (port 80 interne, réseau docker `mi-Symfony-net`). **Ne pas lancer de serveur PHP manuel** (`php -S`) : la stack fournit déjà l'app.
-- Commandes utiles :
-  - `docker ps` / `docker logs <conteneur>` pour l'état.
-  - Depuis `orangemoney_web-mi` : `curl http://nginx-test/fr/` pour vérifier que l'app répond.
-
-## Branche de démarrage (`develop-sp-local`)
-
-- La branche **`develop-sp-local`** est nécessaire pour **démarrer** la stack locale (par ex. après un redémarrage de la machine).
-- Une fois la stack démarrée, elle reflète les changements de **n'importe quelle branche** sur laquelle on checkout ensuite.
-- Symptôme de problème : `nginx-test` en `Restarting`, `orangemoney_web-mi` qui redémarre/plante, l'app ne répond plus (`000`/connexion refusée). Cause : la stack a été démarrée sur une mauvaise branche, ou un checkout a eu lieu pendant son fonctionnement.
-- Correction :
-  1. Working tree propre : `git status --porcelain` ; si des changements non commités existent, ne pas les écraser (stash ou accord utilisateur).
-  2. `git checkout develop-sp-local`
-  3. `docker compose -f docker-compose-test.yml up -d`
-  4. Attendre que `web-test` soit healthy (healthcheck, `start_period` 600 s) puis vérifier `curl http://nginx-test/fr/` → 200.
-
-## Validation du code (obligatoire, dans le conteneur)
-
-Toute validation se fait **dans le conteneur `orangemoney_web-mi`** (le code local est monté dans `/var/www/mobileinvoice`), jamais sur la machine hôte.
-
-- Tests unitaires PHP : `vendor/bin/phing -buildfile build.xml full-build` (lint, phploc, pdepend, phpmd-ci, phpcs-ci, phpcpd-ci, phpunit).
-- QA PHP : `vendor/bin/phing sast-analysis` (phpstan, psalm) ; rapports dans `build/logs/` (phpstan.xml, phpcs.xml, junit).
-- Tests unitaires Vite : `cd vite-frontend && npm run test:coverage` ; ciblé : `npx vitest run <fichiers>`.
-- QA Vite : `npm run lint:quality` (eslint), `npx tsc --noEmit` (types), `npm run duplication` (jscpd).
-- **Ciblage (à faire)** : la validation/QA doit porter en priorité sur **le code ajouté ou modifié** — exécuter le test unitaire PHP du contrôleur/service touché (`vendor/bin/phpunit --filter <Classe>`), `phpcs`/`phpstan` sur ces fichiers PHP ; pour le frontend, `npx vitest run <fichiers-touchés>`, `tsc` et `lint` sur les fichiers TS/React touchés. Ne jamais conclure « propre » si le code modifié n'a pas été couvert par ces checks.
-- **Exigence** : tout doit être propre pour le code ajouté. Si des faux positifs sont détectés (warnings/erreurs pré-existants, limites de config, etc.), **les remonter à l'utilisateur avec explications** pour qu'il prenne la décision — ne pas tricher, masquer ou contourner.
+- **Pas de build** quand les seuls changements viennent de `develop` (déjà vert) **et** que les
+  compteurs du merge, mesurés en local, ne dépassent pas le dernier build vert.
+- **Build nécessaire** dès qu'on ajoute/modifie du code à nous ou qu'un compteur augmente (la
+  couverture, le nombre de tests et gitleaks ne se déduisent pas des compteurs locaux).
 
 ## Tests fonctionnels UILicious
 
-- Sources : `tests/functional/uilicious/` (format script UILicious : `I.goTo`, `I.fill`, `I.click`, `I.see`, `I.select`, `I.scrollToBottom`, `TEST.run(...)`, `SAMPLE.*`, `DATA.*`).
-- Manifeste : `ci/uilicious-tests.json` (groupes de tests exécutés dans l'ordre sur un même worker ; le pipeline répartit les groupes entre workers).
-- Exécution CI : stage « UI-Licious Tests » du `jenkinsfile-dev` → `uilicious-cli run "Paynote-MI" <path> --key <ACCESS_KEY>` ; rapports JSON dans `reports/ui-licious/` puis JUnit (`reports/uilicious-junit.xml`).
-- Synchronisation cloud : `ci/upload-uilicious-tests.sh` (git = source de vérité, pousse les tests vers le projet cloud « Paynote-MI »).
-- **URL de recette (celle à mettre dans le ticket Redmine, pour la testeuse) : le bastion.**
-  `https://mi-symfony-test-<branche>.bastion.y-note.cm/<locale>/<chemin>`
-  (ex. `https://mi-symfony-test-develop-sp.bastion.y-note.cm/fr/admin/mass-payment/list/`).
-  Raison : l'instance directe `<branche>.mitest.ynote.africa` tombe souvent ; le bastion (Teleport)
-  route vers le port local dédié de la branche (`ci/branch-ports.txt`, ex. `develop-sp 5302`).
-- **Exécution des tests fonctionnels (CI et agent) : l'URL directe, jamais le bastion.**
-  `https://<branche>.mitest.ynote.africa` — l'agent n'a pas accès au bastion, et UILicious est
-  autorisé à taper le domaine direct. Les scripts restent paramétrables via
-  `I.goTo((DATA.url || "https://mitest.ynote.africa") + "/fr/")`.
-- **Règles** :
-  - Si un test fonctionnel n'existe pas pour une fonctionnalité : l'ajouter **et le faire valider** (exécution réelle).
-  - Si un test fonctionnel est cassé : le fixer **et le faire valider**.
-  - Validation locale possible (sans déployer sur mitest) : tunnel `cloudflared tunnel --url http://nginx-test` puis `uilicious-cli run "Paynote-MI" "<path>" --key <KEY> --dataObject '{"url":"https://<tunnel>.trycloudflare.com"}'` ; les tests utilisent `I.goTo((DATA.url || "https://mitest.ynote.africa") + "/fr/")` pour être paramétrables et rétro-compatibles CI.
-  - La clé UILicious est fournie par l'utilisateur et rangée **hors dépôt** dans
-    `reference/uilicious-access.md` (chmod 600) :
-    `export UILICIOUS_ACCESSKEY=$(sed -n 's/^key=//p' /home/y-note/.codex/skills/mi/reference/uilicious-access.md)`.
-    Ne jamais la committer ni la stocker dans le repo.
+- Les exécuter sur **https://develop-sp.mitest.ynote.africa/** (ou l'URL précisée dans la demande).
+  Scripts : `tests/functional/uilicious/`, manifeste `ci/uilicious-tests.json`.
+- Un test fonctionnel manquant pour une fonctionnalité s'ajoute **et se fait valider** ; un test cassé
+  se corrige **et se fait valider**.
+- La clé UILicious est fournie par l'utilisateur (variable `UILICIOUS_ACCESSKEY`) : jamais commitée.
+
+## Stack locale
+
+- `docker compose -f docker-compose-test.yml up -d` depuis **n'importe quelle branche** (après le
+  correctif local `SKIP_DEPS_INSTALL` + `nginx.local.conf` ; en attendant, démarrer depuis
+  `develop-sp-local`).
+- App servie par `nginx-test` : vérifier avec `curl http://nginx-test/fr/` → 200. Ne pas lancer de
+  serveur PHP manuel.
+- Conteneur de travail : `orangemoney_web-mi` (php-fpm) ; état : `docker ps`, `docker logs <conteneur>`.

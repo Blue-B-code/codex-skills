@@ -19,6 +19,11 @@ description: "Projet MI (MobileInvoice, Orange Money, PayNote / Y-Note) : stack 
   l'instance de recette porte **plusieurs tickets à la fois**, que la testeuse peut recetter dans la
   même passe. URL à annoncer : voir la règle « URL de recette » ci-dessous.
 - Pas de force-push sur `develop-sp` : si elle a divergé, on merge (jamais de reset).
+- Une `feature-*` part de `develop` et ne merge que `develop` — **jamais `develop-sp`** (c'est un
+  puits : elle reçoit des merges, elle n'en alimente aucune).
+- Une feature ne dépend jamais d'une autre feature. Si du code commun (socle, helpers) naît dans une
+  feature, on le **recopie à l'identique** dans les autres features en cours : les merges resteront
+  sans conflit, et chaque branche reste testable. Le partage durable, lui, passe par `develop`.
 
 ## Régression d'un quality gate (PHPMD, jscpd, PHPStan…) sur `develop-sp`
 
